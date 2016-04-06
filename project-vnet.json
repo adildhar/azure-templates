@@ -1,0 +1,130 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "defaultValue": "eastus",
+            "metadata": {
+                "description": "Location where first VNET, Gateway, PublicIP and Connection will be deployed."
+            }
+        },
+        "virtualNetworkName": {
+            "type": "string",
+            "defaultValue": "projectvnet",
+            "metadata": {
+                "description": "Name of the VNET."
+            }
+        },
+        "addressPrefix": {
+            "type": "string",
+            "defaultValue": "172.32.16.0/26",
+            "metadata": {
+                "description": "Address space for the Project VNET."
+            }
+        },
+        "subnet1Name": {
+            "type": "string",
+            "defaultValue": "Frontend",
+            "metadata": {
+                "description": "Name of the web subnet in the project VNET"
+            }
+        },
+        "subnet1Prefix": {
+            "type": "string",
+            "defaultValue": "172.32.16.0/27",
+            "metadata": {
+                "description": "The prefix for the web subnet in the project VNET."
+            }
+        },
+        "subnet2Name": {
+            "type": "string",
+            "defaultValue": "Backend",
+            "metadata": {
+                "description": "Name of the backend subnet in the project VNET."
+            }
+        },
+        "subnet2Prefix": {
+            "type": "string",
+            "defaultValue": "172.32.16.32/27",
+            "metadata": {
+                "description": "The prefix for the backend subnet in the project VNET."
+            }
+        }
+    },
+    "variables": {
+      "networkApiVersion": "2016-03-30",
+      "networkSecurityGroupName": "frontend-sg-1"
+    },
+    "resources": [
+        {
+            "apiVersion": "[variables('networkApiVersion')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[parameters('virtualNetworkName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+              "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('addressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('subnet1Name')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('subnet1Prefix')]",
+                            "networkSecurityGroup": { "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]" }
+                        }
+                    },
+                    {
+                        "name": "[parameters('subnet2Name')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('subnet2Prefix')]"
+                        }
+                    }
+                ]
+            }
+        },
+       {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('networkSecurityGroupName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "rdp_rule",
+            "properties": {
+              "description": "allow rdp rule",
+              "protocol": "Tcp",
+              "sourcePortRange": "3389",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 101,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "ssh_rule",
+            "properties": {
+              "description": "allow rdp rule",
+              "protocol": "Tcp",
+              "sourcePortRange": "22",
+              "destinationPortRange": "22",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 102,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    }
+    ]
+}
