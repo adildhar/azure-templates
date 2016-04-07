@@ -1,0 +1,103 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01-preview/deploymentTemplate.json",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "resourceLocation": {
+      "type": "string",
+      "defaultValue": "East US",
+      "metadata": {
+        "description": "Azure region where all resources will be deployed. This is distinct from resource group location."
+      }
+    }
+  },
+  "variables": {
+    "availabilitySetName": "myAvSet",
+    "virtualNetworkName": "projectvnet",
+    "addressPrefix": "172.32.16.0/26",
+    "virtualNetworkID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
+    "subnetName": "Frontend",
+    "subnetPrefix": "172.32.16.0/27",
+    "subnetRef": "[concat(variables('virtualNetworkID'),'/subnets/',variables ('subnetName'))]",
+    "publicIPAddressName": "projectlbip",
+    "publicIPAddressType": "Dynamic",
+    "loadBalancerName": "projectlb",
+    "dnsNameforLBIP": "projectlb",
+    "publicIPAddressID": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]",
+    "loadBalancerID": "[resourceId('Microsoft.Network/loadBalancers',variables('loadBalancerName'))]",
+    "frontEndIPConfigID": "[concat(variables('loadBalancerID'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]",
+    "loadBalancerPoolID": "[concat(variables('loadBalancerID'),'/backendAddressPools/BackendPool1')]",
+    "loadBalancerProbeID": "[concat(variables('loadBalancerID'),'/probes/tcpProbe')]"
+  },
+ "resources": [
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('publicIPAddressName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('dnsNameforLBIP')]"
+        }
+      }
+    }, 
+    {
+      "apiVersion": "2015-05-01-preview",
+      "name": "[variables('loadBalancerName')]",
+      "type": "Microsoft.Network/loadBalancers",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]"
+      ],
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "LoadBalancerFrontEnd",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[variables('publicIPAddressID')]"
+              }
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "BackendPool1"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "name": "LBRule",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[variables('frontEndIPConfigID')]"
+              },
+              "backendAddressPool": {
+                "id": "[variables('loadBalancerPoolID')]"
+              },
+              "protocol": "tcp",
+              "frontendPort": 80,
+              "backendPort": 80,
+              "enableFloatingIP": false,
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[variables('loadBalancerProbeID')]"
+              }
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "tcpProbe",
+            "properties": {
+              "protocol": "tcp",
+              "port": 80,
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
